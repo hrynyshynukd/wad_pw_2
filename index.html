@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Форма створення публікації з медіаконтентом">
+  <title>Створити публікацію</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main class="page">
+    <section class="post-card" aria-labelledby="page-title">
+      <header class="card-header">
+        <h1 id="page-title">Створити публікацію</h1>
+        <p>Додайте зображення або відео, заповніть інформацію та опублікуйте контент.</p>
+      </header>
+
+      <form id="post-form" class="post-form">
+        <div class="field">
+          <label for="post-title">Назва <span class="required" aria-hidden="true">*</span></label>
+          <input id="post-title" name="title" type="text"
+                 placeholder="Наприклад: Моя подорож до Карпат"
+                 minlength="3" maxlength="100" required autocomplete="off">
+          <small class="field-hint">Від 3 до 100 символів.</small>
+        </div>
+
+        <div class="field">
+          <label for="post-description">Опис <span class="required" aria-hidden="true">*</span></label>
+          <textarea id="post-description" name="description"
+                    placeholder="Розкажіть більше про цей медіаконтент..."
+                    rows="4" minlength="10" maxlength="1000" required></textarea>
+          <small class="field-hint">Від 10 до 1000 символів.</small>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="post-category">Категорія <span class="required" aria-hidden="true">*</span></label>
+            <select id="post-category" name="category" required>
+              <option value="" selected disabled>Оберіть категорію</option>
+              <option value="travel">Подорожі</option>
+              <option value="nature">Природа</option>
+              <option value="lifestyle">Стиль життя</option>
+              <option value="food">Їжа</option>
+              <option value="education">Освіта</option>
+              <option value="other">Інше</option>
+            </select>
+          </div>
+
+          <fieldset class="privacy-field">
+            <legend>Приватність</legend>
+            <div class="radio-options">
+              <label class="radio-option">
+                <input type="radio" name="privacy" value="public" checked>
+                <span>Публічний</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="privacy" value="private">
+                <span>Приватний</span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="field">
+          <label for="media-file">Медіаконтент <span class="required" aria-hidden="true">*</span></label>
+          <div class="upload-area" id="upload-area">
+            <input class="file-input" id="media-file" name="media" type="file"
+                   accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp3"
+                   aria-describedby="upload-hint" required>
+            <label class="upload-label" for="media-file" id="upload-label">
+              <span class="upload-icon" aria-hidden="true">☁</span>
+              <span class="upload-title">Перетягніть файл сюди</span>
+              <span class="upload-action">або натисніть, щоб <strong>вибрати</strong></span>
+              <span class="upload-hint" id="upload-hint">JPG, PNG, WEBP, MP4, WEBM, MP3 · до 50 МБ</span>
+            </label>
+          </div>
+          <div class="media-preview" id="media-preview" hidden>
+            <div class="preview-content" id="preview-content"></div>
+            <div class="preview-details">
+              <span id="file-name"></span>
+              <button class="remove-file" id="remove-file" type="button">Видалити файл</button>
+            </div>
+          </div>
+          <p class="form-message" id="file-message" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="form-message submit-message" id="submit-message" role="status" aria-live="polite"></div>
+        <div class="form-actions">
+          <button class="button button-secondary" id="cancel-button" type="reset">Скасувати</button>
+          <button class="button button-primary" type="submit">Опублікувати</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const form = document.getElementById('post-form');
+      const fileInput = document.getElementById('media-file');
+      const uploadArea = document.getElementById('upload-area');
+      const preview = document.getElementById('media-preview');
+      const previewContent = document.getElementById('preview-content');
+      const fileName = document.getElementById('file-name');
+      const fileMessage = document.getElementById('file-message');
+      const submitMessage = document.getElementById('submit-message');
+      const removeButton = document.getElementById('remove-file');
+      const maxFileSize = 50 * 1024 * 1024;
+      const allowedExtensions = /\.(jpe?g|png|webp|mp4|webm|mp3)$/i;
+      let currentObjectUrl = null;
+
+      function clearPreview() {
+        if (currentObjectUrl) {
+          URL.revokeObjectURL(currentObjectUrl);
+          currentObjectUrl = null;
+        }
+        previewContent.replaceChildren();
+        preview.hidden = true;
+        uploadArea.hidden = false;
+        fileName.textContent = '';
+      }
+
+      function showFile(file) {
+        fileMessage.textContent = '';
+        submitMessage.textContent = '';
+        if (!file) {
+          clearPreview();
+          fileInput.required = true;
+          return;
+        }
+
+        if (file.size > maxFileSize) {
+          fileInput.value = '';
+          clearPreview();
+          fileInput.required = true;
+          fileMessage.textContent = 'Файл завеликий. Максимальний розмір — 50 МБ.';
+          return;
+        }
+
+        if (!allowedExtensions.test(file.name)) {
+          fileInput.value = '';
+          clearPreview();
+          fileInput.required = true;
+          fileMessage.textContent = 'Непідтримуваний формат. Виберіть JPG, PNG, WEBP, MP4, WEBM або MP3.';
+          return;
+        }
+
+        clearPreview();
+        fileInput.required = false;
+        currentObjectUrl = URL.createObjectURL(file);
+        fileName.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} МБ)`;
+
+        let mediaElement;
+        if (file.type.startsWith('image/')) {
+          mediaElement = document.createElement('img');
+          mediaElement.alt = `Попередній перегляд файлу ${file.name}`;
+          mediaElement.src = currentObjectUrl;
+        } else if (file.type.startsWith('video/')) {
+          mediaElement = document.createElement('video');
+          mediaElement.controls = true;
+          mediaElement.preload = 'metadata';
+          mediaElement.src = currentObjectUrl;
+          mediaElement.setAttribute('aria-label', `Попередній перегляд відео ${file.name}`);
+        } else {
+          mediaElement = document.createElement('audio');
+          mediaElement.controls = true;
+          mediaElement.src = currentObjectUrl;
+          mediaElement.setAttribute('aria-label', `Прослухати аудіофайл ${file.name}`);
+        }
+        previewContent.append(mediaElement);
+        uploadArea.hidden = true;
+        preview.hidden = false;
+      }
+
+      fileInput.addEventListener('change', () => showFile(fileInput.files[0]));
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, event => {
+          event.preventDefault();
+          uploadArea.classList.add('is-dragging');
+        });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, event => {
+          event.preventDefault();
+          uploadArea.classList.remove('is-dragging');
+        });
+      });
+      uploadArea.addEventListener('drop', event => {
+        const file = event.dataTransfer.files[0];
+        if (!file) return;
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        fileInput.files = transfer.files;
+        showFile(file);
+      });
+
+      removeButton.addEventListener('click', () => {
+        fileInput.value = '';
+        showFile(null);
+        fileInput.focus();
+      });
+
+      form.addEventListener('reset', () => {
+        window.setTimeout(() => {
+          fileInput.value = '';
+          clearPreview();
+          fileMessage.textContent = '';
+          submitMessage.textContent = '';
+          document.getElementById('post-title').focus();
+        }, 0);
+      });
+
+      form.addEventListener('input', () => {
+        submitMessage.textContent = '';
+      });
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        submitMessage.className = 'form-message submit-message';
+
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          submitMessage.textContent = 'Перевірте, будь ласка, заповнення обов’язкових полів.';
+          submitMessage.classList.add('is-error');
+          return;
+        }
+
+        const title = document.getElementById('post-title').value.trim();
+        const privacy = form.elements.privacy.value === 'public' ? 'публічною' : 'приватною';
+        submitMessage.textContent = `Форма перевірена успішно! Публікація «${title}» готова до ${privacy} публікації. У цій навчальній версії дані не надсилаються на сервер.`;
+        submitMessage.classList.add('is-success');
+      });
+    })();
+  </script>
+</body>
+</html>
